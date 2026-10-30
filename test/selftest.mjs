@@ -142,6 +142,24 @@ test('config: defaults are applied', () => {
   assert.equal(config.idleCheckIntervalMs, 30000);
 });
 
+test('config: unwraps schemastery volatile accessors', () => {
+  const vol = (value) => ({ get: () => value });
+  const config = normalizeConfig({
+    defaultSource: vol('modelscope'),
+    idleTimeoutMs: vol(60000),
+    modelRoots: vol(['/models/a', '/models/b']),
+    proxy: vol('socks5://127.0.0.1:1080'),
+    locale: vol('en'),
+    llamaArgs: vol(['--threads', '4'])
+  });
+  assert.equal(config.defaultSource, 'modelscope');
+  assert.equal(config.idleTimeoutMs, 60000);
+  assert.deepEqual(config.modelRoots, ['/models/a', '/models/b']);
+  assert.equal(config.proxy.all, 'socks5://127.0.0.1:1080');
+  assert.equal(config.locale, 'en');
+  assert.deepEqual(config.llamaArgs, ['--threads', '4']);
+});
+
 test('config: proxy shorthand, empty strings are skipped, env is cleaned', () => {
   const config = normalizeConfig({ proxy: 'http://127.0.0.1:7890' });
   assert.equal(config.proxy.all, 'http://127.0.0.1:7890');

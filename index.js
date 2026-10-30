@@ -142,6 +142,12 @@ export function apply(ctx, rawConfig) {
     }), 'dsh-open-model: prompt section');
   });
 
+  // Settings: this bundle ships its own page (client.js), so it opts out of the
+  // auto-generated form while keeping configuration reads and writes intact.
+  ctx.inject(['settings'], (child) => {
+    child.effect(() => child.settings.configure({ auto: false }, ctx.fiber), 'dsh-open-model: settings page policy');
+  });
+
   // Idle reaper: releases servers untouched for idleTimeoutMs.
   ctx.effect(() => {
     const timer = setInterval(() => {

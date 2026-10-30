@@ -152,6 +152,30 @@ entry script and `process.resourcesPath`) and falls back to a Standard-Schema
 object only when that lookup fails. The result is a Config row that Settings and
 the Config inspector can project, with descriptions and defaults.
 
+Every field is marked `.volatile()`, which is what lets the Host settings service
+expose it to a live form. The plugin ships that form itself and opts out of the
+auto-generated page (`settings.configure({ auto: false })`).
+
+## Settings page
+
+Open **Settings → Open Model Hub** in the Web GUI. The page edits every field of
+the Config above:
+
+- grouped form (search & download, network & mirrors, inference & resources,
+  local models, advanced, interface) with per-field hints, defaults and an
+  `Overridden` marker plus a per-field reset;
+- writes go through the shared settings transport (`ctx.configForms`) with
+  revision fencing, so a concurrent writer is reported instead of overwritten;
+- saving persists into the profile patch and restarts this plugin row, which
+  stops running model servers (downloads and the registry are kept);
+- the form is bilingual and follows the GUI language, and it only appears while
+  the Host serves the `dsh-open-model` settings namespace.
+
+The page is a plain-JS Client half (`client.js`), imports no Harness Client
+package, and uses `--dsw-alias-*` theme tokens only, so it inherits light/dark
+themes. Add `client.js` and the `dsh.client` block to the bundle manifest when
+packing.
+
 Tool descriptions are English model-facing protocol text; every tool result,
 error, install instruction and release notice follows the session locale.
 
@@ -227,6 +251,18 @@ Windows 的 `llama-server` 与 Apple Silicon 的 `mlxcel-server`，并针对国�
   是 `${DSH_HOME}/models`。
 - 所有写入都是“临时文件 + rename”；读取容忍文件缺失或损坏，损坏的注册表只会
   回退为空并记录警告，不会阻止插件加载。
+
+### 配置界面
+
+在 Web 界面打开 **设置 → 开源模型中枢**，即可可视化修改上表全部字段：
+
+- 按“搜索与下载 / 网络与镜像 / 推理与资源 / 本地模型 / 高级 / 界面”分组，逐项提供
+  说明、默认值、`已覆盖` 标记与单项“恢复默认”；
+- 写入走共享设置通道（`ctx.configForms`），带版本校验，并发修改会提示而不是静默覆盖；
+- 保存会持久化到 profile patch 并重启插件行（正在运行的模型服务会停止，下载与注册表保留）；
+- 表单随界面语言中英切换，仅在 Host 提供 `dsh-open-model` 设置命名空间时出现；
+- 界面是纯 JS 客户端半（`client.js`），不引入 Harness 客户端包，只使用
+  `--dsw-alias-*` 主题令牌，自动适配亮/暗主题。
 
 ### 镜像与代理
 

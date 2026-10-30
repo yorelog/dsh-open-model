@@ -2,13 +2,13 @@
 # because the Loader restarts this row when the configuration changes.
 #
 # Example (uncomment and edit in the profile patch to override defaults):
-#   - id: open-model
-#     name: '@local/open-model'
+#   - id: dsh-open-model
+#     name: 'dsh-open-model'
 #     config:
 #       idleTimeoutMs: 300000
 #       proxy:
 #         https: http://127.0.0.1:7890
 #       githubProxyPrefix: https://gh-proxy.com/
 - insert:
-    - id: open-model
-      name: '@local/open-model'
+    - id: dsh-open-model
+      name: 'dsh-open-model'

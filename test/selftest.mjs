@@ -1,5 +1,5 @@
 /**
- * Local self-test for the open-model plugin (not shipped).
+ * Local self-test for the dsh-open-model plugin (not shipped).
  * Run with: node test/selftest.mjs
  */
 

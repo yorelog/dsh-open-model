@@ -1,4 +1,10 @@
-# @local/open-model
+<p align="center">
+  <img src="./icon.svg" width="96" height="96" alt="dsh-open-model icon">
+</p>
+
+# dsh-open-model
+
+Repository: <https://github.com/yorelog/dsh-open-model>
 
 Local open-model hub for DeepSeek Harness (dsh). One Host bundle covers the
 whole loop: **search → download → discover/register → start inference → release
@@ -67,8 +73,8 @@ config restarts this plugin row (hot reload) and tears down owned servers.
 Example profile patch:
 
 ```yaml
-- id: open-model
-  name: '@local/open-model'
+- id: dsh-open-model
+  name: 'dsh-open-model'
   config:
     idleTimeoutMs: 300000
     proxy:
@@ -190,7 +196,7 @@ sanitization and the prompt section in both languages.
 
 ## 中文说明
 
-`@local/open-model` 是 DeepSeek Harness 的本地开源模型中枢，覆盖
+`dsh-open-model` 是 DeepSeek Harness 的本地开源模型中枢，覆盖
 **搜索 → 下载 → 发现/注册 → 启动推理 → 空闲释放** 全流程，在 Host 侧同时管理
 Windows 的 `llama-server` 与 Apple Silicon 的 `mlxcel-server`，并针对国内网络做了
 镜像与代理适配。

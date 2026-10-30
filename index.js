@@ -1,5 +1,5 @@
 /**
- * @local/open-model — local open-model hub for DeepSeek Harness.
+ * dsh-open-model — local open-model hub for DeepSeek Harness.
  *
  * Host half: search, download, register, run and idle-release local models
  * through llama-server (Windows) and mlxcel-server (Apple Silicon), with
@@ -8,7 +8,7 @@
  * Every long-lived resource is created inside a Cordis effect, and the final
  * effect stops both the idle timer and every child process this plugin
  * started, so a hot reload cannot leave orphaned servers behind.
- * @module @local/open-model
+ * @module dsh-open-model
  */
 
 import { Config, normalizeConfig } from './lib/config.js';
@@ -44,7 +44,7 @@ function createHubState(logger) {
     pushRelease(info) {
       releases = [{ ...info, at: isoNow() }, ...releases].slice(0, 10);
       void writeJsonAtomic(statePath(), { version: 1, releases }).catch((error) => {
-        logger?.warn?.(`[open-model] state write failed: ${error instanceof Error ? error.message : String(error)}`);
+        logger?.warn?.(`[dsh-open-model] state write failed: ${error instanceof Error ? error.message : String(error)}`);
       });
     },
     /** @returns {Array<{ modelId: string, at: string, runtime: string | null, port: number | null }>} */
@@ -61,7 +61,7 @@ function createHubState(logger) {
  */
 export function apply(ctx, rawConfig) {
   const config = normalizeConfig(rawConfig);
-  const logger = ctx.logger('open-model');
+  const logger = ctx.logger('dsh-open-model');
   const registry = new ModelRegistry({ logger });
   const state = createHubState(logger);
   const scanCache = new Map();
@@ -70,7 +70,7 @@ export function apply(ctx, rawConfig) {
     logger,
     onUpdate: (task) => {
       try {
-        ctx.emit?.('open-model/download-progress', task);
+        ctx.emit?.('dsh-open-model/download-progress', task);
       } catch {
         // An event listener must never break a download.
       }
@@ -127,19 +127,19 @@ export function apply(ctx, rawConfig) {
         }
       }
     };
-  }, 'open-model: tools');
+  }, 'dsh-open-model: tools');
 
   // Prompt section: compact registered-model list, localized and refreshed on
   // every assembly so registry changes are visible without a restart.
   ctx.inject(['systemPrompt'], (child) => {
     child.effect(() => child.systemPrompt.section({
-      name: 'open-model:local-models',
+      name: 'dsh-open-model:local-models',
       order: 2550,
       text: () => {
         const { translate } = getLocale();
         return promptSectionText({ config, registry, tooling, state, translate });
       }
-    }), 'open-model: prompt section');
+    }), 'dsh-open-model: prompt section');
   });
 
   // Idle reaper: releases servers untouched for idleTimeoutMs.
@@ -159,25 +159,25 @@ export function apply(ctx, rawConfig) {
               port: item.port ?? '—'
             }));
             try {
-              ctx.emit?.('open-model/model-released', item);
+              ctx.emit?.('dsh-open-model/model-released', item);
             } catch {
               // Notifications are best effort.
             }
           }
         } catch (error) {
-          logger?.warn?.(`[open-model] idle sweep failed: ${error instanceof Error ? error.message : String(error)}`);
+          logger?.warn?.(`[dsh-open-model] idle sweep failed: ${error instanceof Error ? error.message : String(error)}`);
         }
       })();
     }, config.idleCheckIntervalMs);
     timer.unref?.();
     return () => clearInterval(timer);
-  }, 'open-model: idle reaper');
+  }, 'dsh-open-model: idle reaper');
 
   // Teardown: cancel downloads and stop every model server this instance owns.
   ctx.effect(() => async () => {
     downloads.dispose();
     await supervisor.dispose().catch((error) => {
-      logger?.warn?.(`[open-model] teardown failed: ${error instanceof Error ? error.message : String(error)}`);
+      logger?.warn?.(`[dsh-open-model] teardown failed: ${error instanceof Error ? error.message : String(error)}`);
     });
-  }, 'open-model: runtime cleanup');
+  }, 'dsh-open-model: runtime cleanup');
 }

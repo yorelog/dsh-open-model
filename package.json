@@ -1,8 +1,17 @@
 {
-  "name": "@local/open-model",
+  "name": "dsh-open-model",
   "version": "1.0.0",
   "private": true,
   "description": "Local open-model hub for DeepSeek Harness: search, download, register, run, and idle-release local models through llama-server (Windows) and mlxcel-server (Apple Silicon).",
+  "author": "yorelog",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yorelog/dsh-open-model.git"
+  },
+  "homepage": "https://github.com/yorelog/dsh-open-model",
+  "bugs": {
+    "url": "https://github.com/yorelog/dsh-open-model/issues"
+  },
   "type": "module",
   "exports": {
     ".": "./index.js",
@@ -35,7 +44,8 @@
     "mlx",
     "gguf",
     "huggingface",
-    "modelscope"
+    "modelscope",
+    "dsh-open-model"
   ],
   "license": "MIT"
 }

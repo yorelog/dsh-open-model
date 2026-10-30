@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Open Model Hub",
+    "description": "Search HuggingFace, hf-mirror and ModelScope, download and register local models, run them through llama-server or mlxcel-server, and free idle runtimes automatically."
+  }
+}

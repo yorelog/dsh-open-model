@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="open-model">
+  <defs>
+    <linearGradient id="grad" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4f8cff"/>
+      <stop offset="1" stop-color="#7b5cff"/>
+    </linearGradient>
+  </defs>
+  <!-- 外圆角背板 -->
+  <rect x="3" y="3" width="58" height="58" rx="14" fill="url(#grad)"/>
+
+  <!-- 等距立方体（本地硬件载体） -->
+  <g stroke="#ffffff" stroke-width="2.6" fill="none" stroke-linejoin="round">
+    <path d="M24 28 L32 24 L40 28 L40 36 L32 40 L24 36 Z"/>
+    <path d="M24 28 L32 32 L40 28"/>
+    <path d="M32 32 L32 40"/>
+  </g>
+
+  <!-- 芯片引脚，硬件接入标识 -->
+  <g stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity="0.92">
+    <path d="M32 11v6"/>
+    <path d="M32 47v6"/>
+    <path d="M11 32h6"/>
+    <path d="M47 32h6"/>
+  </g>
+</svg>

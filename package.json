@@ -1,0 +1,41 @@
+{
+  "name": "@local/open-model",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local open-model hub for DeepSeek Harness: search, download, register, run, and idle-release local models through llama-server (Windows) and mlxcel-server (Apple Silicon).",
+  "type": "module",
+  "exports": {
+    ".": "./index.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "lib/*.js",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20.11"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "cordis",
+    "plugin",
+    "llama.cpp",
+    "mlx",
+    "gguf",
+    "huggingface",
+    "modelscope"
+  ],
+  "license": "MIT"
+}

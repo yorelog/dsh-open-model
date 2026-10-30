@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "开源模型中枢",
+    "description": "在 HuggingFace、hf-mirror 与 ModelScope 中搜索，下载并注册本地模型，通过 llama-server 或 mlxcel-server 启动推理，并在空闲时自动释放运行资源。"
+  }
+}

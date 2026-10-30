@@ -413,6 +413,26 @@ window.__ModuleLoader__.load({
       }
     };
 
+    /**
+     * Locale dictionaries are flat maps: `translate` reads `dict[key]` directly,
+     * so dotted keys must be flattened before registration.
+     * @param {Record<string, any>} value
+     * @param {string} [prefix]
+     * @param {Record<string, string>} [out]
+     * @returns {Record<string, string>}
+     */
+    function flattenDict(value, prefix = '', out = {}) {
+      for (const [key, child] of Object.entries(value)) {
+        const path = prefix.length === 0 ? key : `${prefix}.${key}`;
+        if (child !== null && typeof child === 'object' && !Array.isArray(child)) {
+          flattenDict(child, path, out);
+        } else {
+          out[path] = String(child);
+        }
+      }
+      return out;
+    }
+
     // ---------------------------------------------------------------------
     // Config form specification (Settings tab)
     // ---------------------------------------------------------------------
@@ -1376,7 +1396,10 @@ window.__ModuleLoader__.load({
      */
     function apply(ctx) {
       const bound = ctx.locale.bind(NS);
-      ctx.effect(() => ctx.locale.register(NS, { en, zh }), 'dsh-open-model: settings dictionaries');
+      ctx.effect(() => ctx.locale.register(NS, {
+        en: flattenDict(en),
+        zh: flattenDict(zh)
+      }), 'dsh-open-model: settings dictionaries');
 
       const controller = ctx.configForms.get(CONFIG_NS);
       const Page = (props) => h(OpenModelPage, {

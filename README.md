@@ -4,7 +4,6 @@
 
 # dsh-open-model
 
-Repository: <https://github.com/yorelog/dsh-open-model>
 
 Local open-model hub for DeepSeek Harness (dsh). One Host bundle covers the
 whole loop: **search → download → discover/register → start inference → release

@@ -12,6 +12,7 @@
  */
 
 import { Config, normalizeConfig } from './lib/config.js';
+import { registerToolBridge } from './lib/bridge.js';
 import { detectDownloadTooling, DownloadManager } from './lib/download.js';
 import { translator } from './lib/i18n.js';
 import { resolveLocale } from './lib/locale.js';
@@ -128,6 +129,19 @@ export function apply(ctx, rawConfig) {
       }
     };
   }, 'dsh-open-model: tools');
+
+  // Same-origin JSON bridge for the settings page's dashboard. It exposes the
+  // exact tool implementations above and only the allowlisted tool names.
+  ctx.inject(['webServer'], (child) => {
+    child.effect(() => registerToolBridge(child, {
+      config,
+      registry,
+      downloads,
+      supervisor,
+      definitions,
+      logger
+    }), 'dsh-open-model: web bridge');
+  });
 
   // Prompt section: compact registered-model list, localized and refreshed on
   // every assembly so registry changes are visible without a restart.

@@ -156,25 +156,51 @@ Every field is marked `.volatile()`, which is what lets the Host settings servic
 expose it to a live form. The plugin ships that form itself and opts out of the
 auto-generated page (`settings.configure({ auto: false })`).
 
-## Settings page
+## Settings page and control panel
 
-Open **Settings → Open Model Hub** in the Web GUI. The page edits every field of
-the Config above:
+Open **Settings → Open Model Hub** in the Web GUI. The page has four tabs:
 
-- grouped form (search & download, network & mirrors, inference & resources,
-  local models, advanced, interface) with per-field hints, defaults and an
-  `Overridden` marker plus a per-field reset;
-- writes go through the shared settings transport (`ctx.configForms`) with
-  revision fencing, so a concurrent writer is reported instead of overwritten;
-- saving persists into the profile patch and restarts this plugin row, which
-  stops running model servers (downloads and the registry are kept);
-- the form is bilingual and follows the GUI language, and it only appears while
-  the Host serves the `dsh-open-model` settings namespace.
+- **Overview** — the four-step workflow, the model folders (with copy buttons),
+  the inference runtime, and a short list of registered models.
+- **Models** — search HuggingFace / hf-mirror / ModelScope with a source and
+  result count, optionally filter the download to one quantization, download in
+  the background, watch byte progress/speed/ETA and cancel; scan the model
+  folders, register discovered files, and start/stop local models.
+- **Runtime** — llama-server / mlxcel status (version, path, source, missing
+  CUDA DLLs) and a one-click llama-server installer with a backend choice.
+- **Settings** — the grouped Config form: per-field hints and defaults, an
+  `Overridden` marker with a per-field reset, revision-fenced writes, and a
+  restart notice. Saving persists into the profile patch and restarts the plugin
+  row, stopping running model servers (downloads and the registry are kept).
+
+The dashboard talks to the Host through the plugin's own same-origin JSON bridge
+(`POST /api/open-model/status` and `POST /api/open-model/tool`). The bridge only
+accepts browser same-origin requests and an allowlist of this plugin's tool
+names; it exposes no arbitrary service call. It lives on the loopback Web server
+only. The configuration form itself rides the shared settings transport
+(`ctx.configForms`).
 
 The page is a plain-JS Client half (`client.js`), imports no Harness Client
 package, and uses `--dsw-alias-*` theme tokens only, so it inherits light/dark
 themes. Add `client.js` and the `dsh.client` block to the bundle manifest when
 packing.
+
+## Quick start
+
+1. **Search**: Settings → Open Model Hub → **Models**, enter a query such as
+   `qwen2.5 gguf`, choose a source, and press Search. (You can also ask the
+   assistant to run `model_search` in chat.)
+2. **Pick and download**: set a file filter such as `*Q4_K_M.gguf` to fetch one
+   quantization, then press Download. Files land in
+   `<model root>/<owner>/<name>` — by default
+   `${DSH_HOME}/models/<owner>/<name>` (on this machine
+   `C:\Users\zhou\.dsh\models\...`).
+3. **Adopt existing files**: put already-downloaded models under a model root
+   (or add the folder in Settings → Model roots), press **Scan folders**, then
+   **Register** the discovered entry.
+4. **Run**: press **Start** in the local model list. GGUF models are served by
+   `llama-server`; MLX models by `mlxcel-server` on Apple Silicon. Idle servers
+   are released after `idleTimeoutMs` (5 minutes by default).
 
 Tool descriptions are English model-facing protocol text; every tool result,
 error, install instruction and release notice follows the session locale.
@@ -254,15 +280,37 @@ Windows 的 `llama-server` 与 Apple Silicon 的 `mlxcel-server`，并针对国�
 
 ### 配置界面
 
-在 Web 界面打开 **设置 → 开源模型中枢**，即可可视化修改上表全部字段：
+在 Web 界面打开 **设置 → 开源模型中枢**，页面分四个标签页：
 
-- 按“搜索与下载 / 网络与镜像 / 推理与资源 / 本地模型 / 高级 / 界面”分组，逐项提供
-  说明、默认值、`已覆盖` 标记与单项“恢复默认”；
-- 写入走共享设置通道（`ctx.configForms`），带版本校验，并发修改会提示而不是静默覆盖；
-- 保存会持久化到 profile patch 并重启插件行（正在运行的模型服务会停止，下载与注册表保留）；
-- 表单随界面语言中英切换，仅在 Host 提供 `dsh-open-model` 设置命名空间时出现；
-- 界面是纯 JS 客户端半（`client.js`），不引入 Harness 客户端包，只使用
-  `--dsw-alias-*` 主题令牌，自动适配亮/暗主题。
+- **总览**：使用流程、本地模型目录（可一键复制）、推理运行时状态、已注册模型摘要；
+- **模型**：按来源搜索（HuggingFace / hf-mirror / ModelScope），可用文件过滤只下载某个
+  量化；后台下载并显示字节进度、速度、剩余时间，可取消；扫描模型目录、注册新发现文件、
+  启动/停止本地模型；
+- **运行时**：llama-server / mlxcel 的可用性、版本、路径、来源与缺失 CUDA DLL，
+  并可选择后端一键安装 llama-server；
+- **设置**：按“搜索与下载 / 网络与镜像 / 推理与资源 / 本地模型 / 高级 / 界面”分组的
+  配置表单，逐项说明、默认值、`已覆盖` 标记与单项“恢复默认”，写入带版本校验；
+  保存会持久化到 profile patch 并重启插件行（运行中的模型会停止，下载与注册表保留）。
+
+搜索与下载、扫描与运行状态通过插件自己的同源 JSON 桥
+（`POST /api/open-model/status`、`POST /api/open-model/tool`）访问 Host：只接受浏览器
+同源请求，且只允许本插件白名单内的工具名，不暴露任意服务调用；桥只存在于回环 Web 服务。
+配置表单仍走共享设置通道（`ctx.configForms`）。
+
+界面是纯 JS 客户端半（`client.js`），不引入 Harness 客户端包，只使用
+`--dsw-alias-*` 主题令牌，自动适配亮/暗主题，并随界面语言中英切换。
+
+### 快速上手
+
+1. **搜索**：设置 → 开源模型中枢 → 模型，输入如 `qwen2.5 gguf`，选来源后点搜索
+   （也可以在对话里让我调用 `model_search`）。
+2. **选择并下载**：建议在“文件过滤”里填例如 `*Q4_K_M.gguf`，只下载需要的量化，点下载。
+   文件会落到 `<模型根目录>/<owner>/<name>`，默认是
+   `${DSH_HOME}/models/<owner>/<name>`（本机为 `C:\Users\zhou\.dsh\models\...`）。
+3. **已有模型**：把文件放进模型根目录（或在设置的“模型根目录”里追加路径），
+   点“扫描目录”，再对新发现条目点“注册”。
+4. **运行**：在本地模型列表点“启动”。GGUF 由 llama-server 提供推理；Apple Silicon 上的
+   MLX 模型由 mlxcel-server 提供。空闲超过 `idleTimeoutMs`（默认 5 分钟）会自动释放。
 
 ### 镜像与代理
 

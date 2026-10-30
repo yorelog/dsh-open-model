@@ -1,61 +1,61 @@
 {
-  "name": "dsh-open-model",
-  "version": "1.1.0",
-  "private": true,
-  "description": "Local open-model hub for DeepSeek Harness: search, download, register, run, and idle-release local models through llama-server (Windows) and mlxcel-server (Apple Silicon), with a settings page.",
-  "author": "yorelog",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/yorelog/dsh-open-model.git"
-  },
-  "homepage": "https://github.com/yorelog/dsh-open-model",
-  "bugs": {
-    "url": "https://github.com/yorelog/dsh-open-model/issues"
-  },
-  "type": "module",
-  "exports": {
-    ".": "./index.js",
-    "./client": "./client.js",
-    "./locale/*.json": "./locale/*.json",
-    "./icon": "./icon.svg"
-  },
-  "files": [
-    "index.js",
-    "client.js",
-    "lib/*.js",
-    "cordis.patch.yml",
-    "locale/*.json",
-    "icon.svg",
-    "README.md",
-    "LICENSE"
-  ],
-  "engines": {
-    "node": ">=20.11"
-  },
-  "dsh": {
-    "bundle": {
-      "patch": "./cordis.patch.yml"
-    },
-    "client": {
-      "platform": "web",
-      "inject": [
-        "@deepseek-ai/dsh-client-ui-settings",
-        "@deepseek-ai/dsh-client-ui-settings-general",
-        "@deepseek-ai/dsh-client-locale"
-      ]
-    }
-  },
-  "keywords": [
-    "deepseek-harness",
-    "dsh",
-    "cordis",
-    "plugin",
-    "llama.cpp",
-    "mlx",
-    "gguf",
-    "huggingface",
-    "modelscope",
-    "dsh-open-model"
-  ],
-  "license": "MIT"
+    "name":  "dsh-open-model",
+    "version":  "1.2.0",
+    "private":  true,
+    "description":  "Local open-model hub for DeepSeek Harness: search, download, register, run, and idle-release local models through llama-server (Windows) and mlxcel-server (Apple Silicon), with a settings page.",
+    "author":  "yorelog",
+    "repository":  {
+                       "type":  "git",
+                       "url":  "git+https://github.com/yorelog/dsh-open-model.git"
+                   },
+    "homepage":  "https://github.com/yorelog/dsh-open-model",
+    "bugs":  {
+                 "url":  "https://github.com/yorelog/dsh-open-model/issues"
+             },
+    "type":  "module",
+    "exports":  {
+                    ".":  "./index.js",
+                    "./client":  "./client.js",
+                    "./locale/*.json":  "./locale/*.json",
+                    "./icon":  "./icon.svg"
+                },
+    "files":  [
+                  "index.js",
+                  "client.js",
+                  "lib/*.js",
+                  "cordis.patch.yml",
+                  "locale/*.json",
+                  "icon.svg",
+                  "README.md",
+                  "LICENSE"
+              ],
+    "engines":  {
+                    "node":  "\u003e=20.11"
+                },
+    "dsh":  {
+                "bundle":  {
+                               "patch":  "./cordis.patch.yml"
+                           },
+                "client":  {
+                               "platform":  "web",
+                               "inject":  [
+                                              "@deepseek-ai/dsh-client-ui-settings",
+                                              "@deepseek-ai/dsh-client-ui-settings-general",
+                                              "@deepseek-ai/dsh-client-locale"
+                                          ]
+                           }
+            },
+    "keywords":  [
+                     "deepseek-harness",
+                     "dsh",
+                     "cordis",
+                     "plugin",
+                     "llama.cpp",
+                     "mlx",
+                     "gguf",
+                     "huggingface",
+                     "modelscope",
+                     "dsh-open-model"
+                 ],
+    "license":  "MIT"
 }

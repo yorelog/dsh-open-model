@@ -190,6 +190,28 @@ package, and uses `--dsw-alias-*` theme tokens only, so it inherits light/dark
 themes. Add `client.js` and the `dsh.client` block to the bundle manifest when
 packing.
 
+### Icon
+
+The bundle ships `icon.svg`, exported as `./icon` and declared as
+`package.json#icon`, and the Settings page repeats the same artwork in its
+header. The Settings navigation glyph itself is shell-owned: the shell maps each
+section id to a built-in icon and falls back to the gear, so a plugin cannot
+supply its own nav glyph through the slot contract.
+
+## Model provider
+
+The Host half registers an OpenAI-compatible LLM provider route named
+`open-model` through `ctx.llm.registerAdapter()`. Every registered model appears
+in the GUI model picker under **Open Model Hub**; selecting one makes it the
+session model, so normal chat and agent runs use the local server directly
+instead of calling `model_infer`.
+
+The adapter resolves the model's live loopback port, auto-loads the model on
+first use, and translates the server's SSE stream into the Harness chunk
+protocol (text, reasoning, tool calls, usage, finish). Models with an in-flight
+provider request are excluded from the idle reaper. `runtime_status` reports
+`LLM provider: open-model is registered with N model(s)`.
+
 ## Quick start
 
 1. **Search**: Settings → Open Model Hub → **Models**, enter a query such as
@@ -307,6 +329,23 @@ Windows 的 `llama-server` 与 Apple Silicon 的 `mlxcel-server`，并针对国�
 
 界面是纯 JS 客户端半（`client.js`），不引入 Harness 客户端包，只使用
 `--dsw-alias-*` 主题令牌，自动适配亮/暗主题，并随界面语言中英切换。
+
+### 图标
+
+插件自带 `icon.svg`（通过 `./icon` 导出，并在 `package.json#icon` 声明），设置页头部
+也使用同一图标。**设置左侧导航的图标由 shell 按 section id 写死**（未知 id 回退为齿轮），
+插件无法通过槽位契约提供自定义导航图标。
+
+### 模型提供商
+
+Host 侧通过 `ctx.llm.registerAdapter()` 注册了一个名为 `open-model` 的 OpenAI 兼容
+提供商。所有已注册模型会出现在界面顶部的模型选择器里（分组名 **Open Model Hub**），
+选中后即可作为会话模型直接对话/跑 Agent，不再需要调用 `model_infer`。
+
+适配器会解析模型当前的本地端口、首次使用时自动加载，并把 llama-server 的 SSE 流转成
+Harness 的 chunk 协议（文本、推理、工具调用、用量、结束）。有进行中请求的模型不会被
+空闲释放扫描停掉。`runtime_status` 会报告
+`LLM provider: open-model is registered with N model(s)`。
 
 ### 快速上手
 

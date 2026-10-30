@@ -62,6 +62,10 @@ window.__ModuleLoader__.load({
         runtimeReady: '{name} is ready ({version}).',
         runtimeMissing: '{name} is not installed yet.',
         runtimeAction: 'Open runtime settings',
+        providerTitle: 'Model provider',
+        providerReady: 'open-model is registered with {count} model(s). Pick one in the chat model selector.',
+        providerMissing: 'The provider is not registered yet; the llm service may be unavailable.',
+        providerHint: 'The selector lists this provider as “Open Model Hub”. Loading a model here also makes it the session model without a tool call.',
         modelsTitle: 'Your models',
         modelCount: '{total} registered, {loaded} running.',
         modelCountNone: 'No model registered yet. Search and download one, or scan your model folder.',
@@ -266,6 +270,10 @@ window.__ModuleLoader__.load({
         runtimeReady: '{name} 已就绪（{version}）。',
         runtimeMissing: '{name} 还没有安装。',
         runtimeAction: '打开运行时设置',
+        providerTitle: '模型提供商',
+        providerReady: 'open-model 已注册，共 {count} 个模型；在对话的模型选择器里选择即可直接使用。',
+        providerMissing: '提供商尚未注册（llm 服务可能不可用）。',
+        providerHint: '模型选择器中显示为「Open Model Hub」；在本地模型列表点“启动”后即可作为会话模型使用，不需要再调用工具。',
         modelsTitle: '你的模型',
         modelCount: '已注册 {total} 个，正在运行 {loaded} 个。',
         modelCountNone: '还没有注册模型。可以搜索下载，或扫描你的模型目录。',
@@ -696,6 +704,8 @@ window.__ModuleLoader__.load({
     const CSS = `
 .om-page { display: flex; flex-direction: column; gap: 18px; max-width: 880px; padding: 4px 0 40px; color: var(--dsw-alias-label-primary); font-size: 14px; line-height: 22px; }
 .om-head { display: flex; flex-direction: column; gap: 4px; }
+.om-head-row { display: flex; align-items: center; gap: 12px; }
+.om-logo { flex: none; display: block; }
 .om-title { margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; }
 .om-desc { margin: 0; color: var(--dsw-alias-label-secondary); font-size: 13px; line-height: 20px; }
 .om-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--dsw-alias-border-l1); }
@@ -746,6 +756,35 @@ window.__ModuleLoader__.load({
 .om-kv { display: flex; flex-direction: column; gap: 2px; }
 .om-kv-label { color: var(--dsw-alias-label-secondary); font-size: 12px; }
 `;
+
+    /**
+     * The bundle icon, inlined so the page carries its own artwork (the
+     * Settings navigation glyph is shell-owned and not overridable by a plugin).
+     * @param {{ size?: number }} props
+     * @returns {any}
+     */
+    function HubIcon(props) {
+      const size = typeof props.size === 'number' ? props.size : 44;
+      return h('svg', {
+        className: 'om-logo',
+        viewBox: '0 0 64 64',
+        width: size,
+        height: size,
+        role: 'img',
+        'aria-label': 'Open Model Hub'
+      },
+      h('defs', null,
+        h('linearGradient', { id: 'om-logo-gradient', x1: 8, y1: 8, x2: 56, y2: 56, gradientUnits: 'userSpaceOnUse' },
+          h('stop', { offset: 0, stopColor: '#4f8cff' }),
+          h('stop', { offset: 1, stopColor: '#7b5cff' }))),
+      h('rect', { x: 3, y: 3, width: 58, height: 58, rx: 14, fill: 'url(#om-logo-gradient)' }),
+      h('rect', { x: 17, y: 17, width: 30, height: 30, rx: 7, fill: '#0f1420', opacity: 0.34 }),
+      h('rect', { x: 21, y: 21, width: 22, height: 22, rx: 5, fill: '#ffffff', opacity: 0.94 }),
+      h('path', { d: 'M27 27h10v3h-3v4h3v3H27v-3h3v-4h-3z', fill: '#4f8cff' }),
+      h('g', { stroke: '#ffffff', strokeWidth: 3, strokeLinecap: 'round', opacity: 0.92 },
+        h('path', { d: 'M32 11v6M32 47v6M11 32h6M47 32h6' }),
+        h('path', { d: 'M20.5 15.6l3 4.2M43.5 15.6l-3 4.2M20.5 48.4l3-4.2M43.5 48.4l-3-4.2' })));
+    }
 
     /**
      * @param {{ className?: string, children?: any }} props
@@ -1504,8 +1543,11 @@ window.__ModuleLoader__.load({
       return h('div', { className: 'om-page' },
         h('style', null, CSS),
         h('header', { className: 'om-head' },
-          h('h2', { className: 'om-title' }, t('title')),
-          h('p', { className: 'om-desc' }, t('subtitle'))),
+          h('div', { className: 'om-head-row' },
+            h(HubIcon, { size: 44 }),
+            h('div', null,
+              h('h2', { className: 'om-title' }, t('title')),
+              h('p', { className: 'om-desc' }, t('subtitle'))))),
         h('div', { className: 'om-tabs', role: 'tablist' },
           TABS.map((entry) => h('button', {
             key: entry.id,

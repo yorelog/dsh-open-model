@@ -17,6 +17,7 @@ import { detectDownloadTooling, DownloadManager } from './lib/download.js';
 import { translator } from './lib/i18n.js';
 import { resolveLocale } from './lib/locale.js';
 import { readJson, statePath, writeJsonAtomic } from './lib/paths.js';
+import { OpenModelAdapter } from './lib/provider.js';
 import { ModelRegistry } from './lib/registry.js';
 import { InferenceSupervisor } from './lib/server.js';
 import { createTools, promptSectionText } from './lib/tools.js';
@@ -98,6 +99,35 @@ export function apply(ctx, rawConfig) {
     tooling = await detectDownloadTooling().catch(() => null);
   })();
 
+  // LLM provider: registered models become selectable in the GUI's model
+  // picker. The adapter resolves each model's live loopback port, auto-loads it
+  // on demand, and streams OpenAI chunks into the Harness protocol.
+  ctx.inject(['llm'], (child) => {
+    const adapter = new OpenModelAdapter({ config, registry, supervisor, logger });
+    child.effect(() => {
+      const handle = child.llm.registerAdapter(['open-model'], adapter);
+      return () => handle();
+    }, 'dsh-open-model: llm provider');
+  });
+
+  /**
+   * Provider presence and catalog size for runtime_status.
+   * @returns {Promise<{ registered: boolean, modelCount: number }>}
+   */
+  const providerStatus = async () => {
+    const llm = ctx.get('llm');
+    if (llm === undefined || llm === null) return { registered: false, modelCount: 0 };
+    try {
+      if (!llm.listProviders().some((provider) => provider.id === 'open-model')) {
+        return { registered: false, modelCount: 0 };
+      }
+      const models = await llm.listModels('open-model');
+      return { registered: true, modelCount: models.length };
+    } catch {
+      return { registered: false, modelCount: 0 };
+    }
+  };
+
   // Tools: register as one effect so unload removes every schema in one go.
   const definitions = createTools({
     ctx,
@@ -108,6 +138,7 @@ export function apply(ctx, rawConfig) {
     scanCache,
     getLocale,
     state,
+    providerStatus,
     logger
   });
   for (const definition of definitions) {
@@ -139,6 +170,7 @@ export function apply(ctx, rawConfig) {
       downloads,
       supervisor,
       definitions,
+      providerStatus,
       logger
     }), 'dsh-open-model: web bridge');
   });

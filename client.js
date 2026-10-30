@@ -83,6 +83,19 @@ window.__ModuleLoader__.load({
         downloads: 'downloads',
         updated: 'updated',
         files: 'files',
+        format: 'Format',
+        formatAuto: { win: 'Auto (Windows: GGUF)', mac: 'Auto (macOS: MLX)' },
+        formatGguf: 'GGUF only',
+        formatMlx: 'MLX / safetensors only',
+        formatAll: 'All formats',
+        badgeGguf: 'GGUF',
+        badgeMlx: 'MLX',
+        badgeSafetensors: 'safetensors',
+        badgeUnknown: 'unknown format',
+        platformHint: 'Filtered for {platform}: Windows shows GGUF, macOS shows MLX/safetensors.',
+        hidden: '{count} repository(ies) hidden because they do not match this platform.',
+        showAll: 'Show all',
+        allHidden: 'Every result was filtered out; choose “All formats” to inspect them.',
         download: 'Download',
         downloading: 'Starting…',
         downloadStarted: 'Download started: {repoId}',
@@ -274,6 +287,19 @@ window.__ModuleLoader__.load({
         downloads: '下载量',
         updated: '更新于',
         files: '文件',
+        format: '格式过滤',
+        formatAuto: { win: '自动（Windows：GGUF）', mac: '自动（macOS：MLX）' },
+        formatGguf: '仅 GGUF',
+        formatMlx: '仅 MLX / safetensors',
+        formatAll: '全部格式',
+        badgeGguf: 'GGUF',
+        badgeMlx: 'MLX',
+        badgeSafetensors: 'safetensors',
+        badgeUnknown: '格式未知',
+        platformHint: '已按 {platform} 过滤：Windows 只显示 GGUF，macOS 只显示 MLX/safetensors。',
+        hidden: '已隐藏 {count} 个与当前平台不匹配的仓库。',
+        showAll: '显示全部',
+        allHidden: '结果都被平台过滤掉了，切到“全部格式”可以查看。',
         download: '下载',
         downloading: '启动中…',
         downloadStarted: '已开始下载：{repoId}',
@@ -487,6 +513,11 @@ window.__ModuleLoader__.load({
       if (field.kind === 'list') {
         return Array.isArray(value) ? value.map((entry) => String(entry)).join('\n') : String(value);
       }
+      if (typeof value === 'object') {
+        // Legacy object values (for example the proxy dict) must not be
+        // stringified as "[object Object]"; an empty object is the default.
+        return Object.keys(value).length === 0 ? '' : JSON.stringify(value);
+      }
       return String(value);
     }
 
@@ -528,6 +559,15 @@ window.__ModuleLoader__.load({
       }
       if (field.kind === 'select') {
         return field.options.includes(trimmed) ? { value: trimmed } : { error: t('settings.error.option') };
+      }
+      if (field.key === 'proxy' && trimmed.startsWith('{')) {
+        try {
+          const parsed = JSON.parse(trimmed);
+          if (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)) return { value: parsed };
+        } catch {
+          // Report the JSON error below.
+        }
+        return { error: t('settings.error.json') };
       }
       return { value: trimmed };
     }
@@ -820,6 +860,56 @@ window.__ModuleLoader__.load({
     // ---------------------------------------------------------------------
 
     /**
+     * Classify one search hit by the artifacts it exposes.
+     * @param {any} entry
+     * @returns {{ gguf: boolean, mlx: boolean, safetensors: boolean, unknown: boolean }}
+     */
+    function classifyRepo(entry) {
+      const tags = Array.isArray(entry?.tags) ? entry.tags.map((tag) => String(tag).toLowerCase()) : [];
+      const files = Array.isArray(entry?.files)
+        ? entry.files.map((file) => String(file?.path ?? file).toLowerCase())
+        : [];
+      const gguf = tags.includes('gguf') || files.some((file) => file.endsWith('.gguf'));
+      const safetensors = tags.includes('safetensors')
+        || tags.some((tag) => tag.includes('mlx'))
+        || files.some((file) => file.endsWith('.safetensors'));
+      const mlx = tags.some((tag) => tag.includes('mlx')) || (safetensors && !gguf);
+      return { gguf, mlx, safetensors, unknown: !gguf && !safetensors };
+    }
+
+    /**
+     * Platform gate for a search hit.
+     * @param {{ gguf: boolean, mlx: boolean, safetensors: boolean, unknown: boolean }} kind
+     * @param {string} platform
+     * @param {'auto'|'all'|'gguf'|'mlx'} filter
+     * @param {string} [arch]
+     * @returns {boolean}
+     */
+    function matchesPlatform(kind, platform, filter, arch) {
+      if (filter === 'all') return true;
+      if (filter === 'gguf') return kind.gguf;
+      if (filter === 'mlx') return kind.mlx || (kind.safetensors && !kind.gguf);
+      if (platform === 'win32') return kind.gguf || kind.unknown;
+      if (platform === 'darwin') {
+        if (arch !== 'arm64') return true;
+        return kind.mlx || kind.safetensors || kind.unknown;
+      }
+      return true;
+    }
+
+    /**
+     * @param {{ gguf: boolean, mlx: boolean, safetensors: boolean, unknown: boolean }} kind
+     * @param {any} t
+     * @returns {string}
+     */
+    function formatBadge(kind, t) {
+      if (kind.gguf) return t('models.badgeGguf');
+      if (kind.mlx) return t('models.badgeMlx');
+      if (kind.safetensors) return t('models.badgeSafetensors');
+      return t('models.badgeUnknown');
+    }
+
+    /**
      * @param {{ status: any, refreshStatus: () => Promise<void>, t: any }} props
      * @returns {any}
      */
@@ -828,6 +918,7 @@ window.__ModuleLoader__.load({
       const [query, setQuery] = React.useState('');
       const [source, setSource] = React.useState('hf-mirror');
       const [limit, setLimit] = React.useState('8');
+      const [formatFilter, setFormatFilter] = React.useState('auto');
       const [include, setInclude] = React.useState('');
       const [results, setResults] = React.useState(null);
       const [searching, setSearching] = React.useState(false);
@@ -841,16 +932,34 @@ window.__ModuleLoader__.load({
       const downloads = Array.isArray(status?.downloads) ? status.downloads : [];
       const models = Array.isArray(status?.models) ? status.models : [];
       const roots = Array.isArray(status?.roots) ? status.roots : [];
+      const platform = typeof status?.platform === 'string' ? status.platform : '';
+      const arch = typeof status?.arch === 'string' ? status.arch : '';
+      const classified = (results ?? []).map((entry) => {
+        const kind = classifyRepo(entry);
+        return { entry, kind, visible: matchesPlatform(kind, platform, formatFilter, arch) };
+      });
+      const hiddenResults = classified.filter((row) => !row.visible).length;
+
+      // Scan the model folders on open, so "local models" is populated without
+      // an extra click; the button re-runs the same scan on demand.
+      React.useEffect(() => {
+        void scan();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, []);
 
       async function search() {
         setSearching(true);
         setError('');
         setNotice('');
         try {
+          const pageSize = Number.parseInt(limit, 10) || 8;
+          // Over-fetch when the platform filter is active, so hiding
+          // repositories of the other format does not empty the page.
+          const fetchLimit = formatFilter === 'all' ? pageSize : Math.min(30, Math.max(pageSize, pageSize * 3));
           const value = await runTool('model_search', {
             query: query.trim(),
             source,
-            limit: Number.parseInt(limit, 10) || 8
+            limit: fetchLimit
           });
           setResults(Array.isArray(value?.results) ? value.results : []);
         } catch (caught) {
@@ -937,6 +1046,21 @@ window.__ModuleLoader__.load({
       return h('div', { className: 'om-page' },
         h('style', null, CSS),
         h(Card, null,
+          h('div', { className: 'om-item-head' },
+            h('span', { className: 'om-card-title' }, t('models.localTitle')),
+            h('span', { className: `om-badge ${models.some((model) => model.loaded) ? 'om-badge-ok' : ''}` },
+              t('overview.modelCount', { total: models.length, loaded: models.filter((model) => model.loaded).length })),
+            h('span', { className: 'om-item-actions' },
+              h(Button, { onClick: () => { void refreshStatus(); } }, t('common.refresh')),
+              h(Button, { onClick: () => { void scan(); }, disabled: scanning }, scanning ? t('models.scanning') : t('models.scan')))),
+          models.length === 0
+            ? h('p', { className: 'om-hint' }, t('models.noLocal'))
+            : h('div', { className: 'om-actions' }, models.map((model) => h('span', {
+              key: model.id,
+              className: `om-badge ${model.loaded ? 'om-badge-ok' : ''}`,
+              title: model.path
+            }, `${model.id}${model.loaded && model.port ? `:${model.port}` : ''}`)))),
+        h(Card, null,
           h('h3', { className: 'om-card-title' }, t('models.searchTitle')),
           h('div', { className: 'om-toolbar' },
             h('div', { className: 'om-grow om-row' },
@@ -959,6 +1083,13 @@ window.__ModuleLoader__.load({
               h('label', { className: 'om-label' }, t('models.limit')),
               h('select', { className: 'om-select', value: limit, onChange: (event) => setLimit(event.target.value) },
                 ['4', '8', '12', '20'].map((value) => h('option', { key: value, value }, value)))),
+            h('div', { className: 'om-row' },
+              h('label', { className: 'om-label' }, t('models.format')),
+              h('select', { className: 'om-select', value: formatFilter, onChange: (event) => setFormatFilter(event.target.value) },
+                h('option', { value: 'auto' }, t(`models.formatAuto.${platform === 'darwin' ? 'mac' : 'win'}`)),
+                h('option', { value: 'gguf' }, t('models.formatGguf')),
+                h('option', { value: 'mlx' }, t('models.formatMlx')),
+                h('option', { value: 'all' }, t('models.formatAll')))),
             h(Button, { variant: 'primary', onClick: () => { void search(); }, disabled: searching }, searching ? t('models.searching') : t('models.search'))),
           h('div', { className: 'om-row' },
             h('label', { className: 'om-label' }, t('models.include')),
@@ -976,19 +1107,30 @@ window.__ModuleLoader__.load({
             ? null
             : h('div', { className: 'om-list' },
               h('h4', { className: 'om-card-title' }, t('models.results')),
+              h('p', { className: 'om-hint' }, t('models.platformHint', {
+                platform: platform === 'darwin' ? 'macOS' : (platform === 'win32' ? 'Windows' : platform)
+              })),
+              hiddenResults > 0
+                ? h('div', { className: 'om-actions' },
+                  h('span', { className: 'om-hint' }, t('models.hidden', { count: hiddenResults })),
+                  h(Button, { onClick: () => setFormatFilter('all') }, t('models.showAll')))
+                : null,
               results.length === 0
                 ? h('p', { className: 'om-hint' }, t('models.noResults'))
-                : results.map((entry) => h('div', { className: 'om-item', key: entry.repoId },
-                  h('div', { className: 'om-item-head' },
-                    h('span', { className: 'om-item-title' }, entry.repoId),
-                    h('span', { className: 'om-item-actions' },
-                      h(Button, {
-                        variant: 'primary',
-                        disabled: downloading[entry.repoId] === true,
-                        onClick: () => { void download(entry.repoId); }
-                      }, downloading[entry.repoId] === true ? t('models.downloading') : t('models.download')))),
-                  h('span', { className: 'om-item-meta' },
-                    `${entry.downloads ?? '—'} ${t('models.downloads')} · ${entry.pipelineTag ?? '—'} · ${t('models.updated')} ${formatDate(entry.updatedAt)} · ${entry.fileCount ?? 0} ${t('models.files')}`))))),
+                : classified.filter((row) => row.visible).length === 0
+                  ? h('p', { className: 'om-hint' }, t('models.allHidden'))
+                  : classified.filter((row) => row.visible).slice(0, Number.parseInt(limit, 10) || 8).map(({ entry, kind }) => h('div', { className: 'om-item', key: entry.repoId },
+                    h('div', { className: 'om-item-head' },
+                      h('span', { className: 'om-badge' }, formatBadge(kind, t)),
+                      h('span', { className: 'om-item-title' }, entry.repoId),
+                      h('span', { className: 'om-item-actions' },
+                        h(Button, {
+                          variant: 'primary',
+                          disabled: downloading[entry.repoId] === true,
+                          onClick: () => { void download(entry.repoId); }
+                        }, downloading[entry.repoId] === true ? t('models.downloading') : t('models.download')))),
+                    h('span', { className: 'om-item-meta' },
+                      `${entry.downloads ?? '—'} ${t('models.downloads')} · ${entry.pipelineTag ?? '—'} · ${t('models.updated')} ${formatDate(entry.updatedAt)} · ${entry.fileCount ?? 0} ${t('models.files')}`))))),
         h(Card, null,
           h('h3', { className: 'om-card-title' }, t('models.downloadsTitle')),
           downloads.length === 0
@@ -1016,6 +1158,7 @@ window.__ModuleLoader__.load({
             ? h('div', { className: 'om-path' }, h('code', null, roots.join('  ·  ')))
             : h('p', { className: 'om-hint' }, t('overview.noRoots')),
           h('div', { className: 'om-actions' },
+            h(Button, { onClick: () => { void refreshStatus(); } }, t('common.refresh')),
             h(Button, { onClick: () => { void scan(); }, disabled: scanning }, scanning ? t('models.scanning') : t('models.scan'))),
           models.length === 0
             ? h('p', { className: 'om-hint' }, t('models.noLocal'))
@@ -1341,14 +1484,22 @@ window.__ModuleLoader__.load({
         void refreshStatus();
       }, [refreshStatus]);
 
-      const activeDownloads = Array.isArray(status?.downloads)
-        ? status.downloads.some((download) => download.state === 'running' || download.state === 'queued')
-        : false;
+      // Keep the panel in sync with Host-side changes (a model registered from
+      // chat, a download, an idle release) without requiring a manual reload.
       React.useEffect(() => {
-        if (!activeDownloads) return undefined;
-        const timer = setInterval(() => { void refreshStatus(); }, 1500);
-        return () => clearInterval(timer);
-      }, [activeDownloads, refreshStatus]);
+        const timer = setInterval(() => { void refreshStatus(); }, 3000);
+        const onFocus = () => { void refreshStatus(); };
+        window.addEventListener('focus', onFocus);
+        return () => {
+          clearInterval(timer);
+          window.removeEventListener('focus', onFocus);
+        };
+      }, [refreshStatus]);
+
+      // Re-read when a tab is opened, so switching back shows fresh state.
+      React.useEffect(() => {
+        void refreshStatus();
+      }, [tab, refreshStatus]);
 
       return h('div', { className: 'om-page' },
         h('style', null, CSS),

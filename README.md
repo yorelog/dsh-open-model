@@ -162,9 +162,15 @@ Open **Settings → Open Model Hub** in the Web GUI. The page has four tabs:
 - **Overview** — the four-step workflow, the model folders (with copy buttons),
   the inference runtime, and a short list of registered models.
 - **Models** — search HuggingFace / hf-mirror / ModelScope with a source and
-  result count, optionally filter the download to one quantization, download in
-  the background, watch byte progress/speed/ETA and cancel; scan the model
-  folders, register discovered files, and start/stop local models.
+  result count; results are filtered to the runnable format for this platform
+  (Windows: GGUF, Apple Silicon: MLX/safetensors) by default, with a format
+  selector, per-result badges and a "show all" escape hatch. Optionally filter
+  the download to one quantization, download in the background, watch byte
+  progress/speed/ETA and cancel. The local model list is scanned automatically
+  when the tab opens (press Scan to refresh), discovered files register with one
+  click, and models can be started/stopped. The panel polls the Host every few
+  seconds, so models registered from chat or released by the idle reaper appear
+  without a reload.
 - **Runtime** — llama-server / mlxcel status (version, path, source, missing
   CUDA DLLs) and a one-click llama-server installer with a backend choice.
 - **Settings** — the grouped Config form: per-field hints and defaults, an
@@ -282,9 +288,12 @@ Windows 的 `llama-server` 与 Apple Silicon 的 `mlxcel-server`，并针对国�
 在 Web 界面打开 **设置 → 开源模型中枢**，页面分四个标签页：
 
 - **总览**：使用流程、本地模型目录（可一键复制）、推理运行时状态、已注册模型摘要；
-- **模型**：按来源搜索（HuggingFace / hf-mirror / ModelScope），可用文件过滤只下载某个
-  量化；后台下载并显示字节进度、速度、剩余时间，可取消；扫描模型目录、注册新发现文件、
-  启动/停止本地模型；
+- **模型**：按来源搜索（HuggingFace / hf-mirror / ModelScope），结果默认按当前平台可运行的
+  格式过滤（Windows 只显示 GGUF，Apple Silicon 只显示 MLX/safetensors），可切换格式、
+  查看每个条目的格式徽标或临时“显示全部”；可用文件过滤只下载某个量化；后台下载并显示
+  字节进度、速度、剩余时间，可取消；打开页面会自动扫描模型目录（也可手动点“扫描”），
+  新发现文件一键注册，已注册模型可直接启动/停止。面板每几秒同步一次 Host 状态，
+  在对话里注册的模型或空闲释放的模型无需刷新即可看到；
 - **运行时**：llama-server / mlxcel 的可用性、版本、路径、来源与缺失 CUDA DLL，
   并可选择后端一键安装 llama-server；
 - **设置**：按“搜索与下载 / 网络与镜像 / 推理与资源 / 本地模型 / 高级 / 界面”分组的

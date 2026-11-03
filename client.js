@@ -226,7 +226,7 @@ window.__ModuleLoader__.load({
         },
         save: 'Save',
         saving: 'Saving…',
-        saved: 'Saved. The plugin restarts with the new configuration.',
+        saved: 'Saved. The new values apply immediately, without a restart.',
         saveFailed: 'The deployment did not accept these values; they were left for you to correct.',
         discard: 'Discard changes',
         reset: 'Reset to default',
@@ -235,7 +235,7 @@ window.__ModuleLoader__.load({
         fixErrors: 'Fix the highlighted fields before saving.',
         readOnly: 'This deployment stores settings read-only.',
         unavailable: 'This plugin row is not active, so its configuration is unavailable.',
-        restartNote: 'Writes persist to this profile’s patch and restart the plugin row. Running models are stopped; download and registry data are kept.'
+        restartNote: 'Writes persist to this profile’s patch and apply immediately: every field is volatile, so the running plugin picks the new values up in place. Loaded models keep running; download and registry data are untouched.'
       }
     };
 
@@ -434,7 +434,7 @@ window.__ModuleLoader__.load({
         },
         save: '保存',
         saving: '保存中…',
-        saved: '已保存，插件将按新配置重启。',
+        saved: '已保存，新配置已立即生效，无需重启。',
         saveFailed: '本部署没有接受这些值，已保留供你修改。',
         discard: '放弃修改',
         reset: '恢复默认',
@@ -443,7 +443,7 @@ window.__ModuleLoader__.load({
         fixErrors: '请先修正标红的字段再保存。',
         readOnly: '本部署的设置为只读。',
         unavailable: '该插件行未激活，暂时无法读取配置。',
-        restartNote: '写入会持久化到本 profile 的 patch 并重启插件行；正在运行的模型会停止，下载与注册表数据保留。'
+        restartNote: '写入会持久化到本 profile 的 patch 并立即生效：所有字段都是 volatile，运行中的插件就地取到新值。已加载的模型继续运行，下载与注册表数据不变。'
       }
     };
 

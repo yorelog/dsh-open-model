@@ -44,8 +44,13 @@ reports which download transport was verified in this environment.
 ## Configuration
 
 All fields are optional; the row's `config` is validated by Schemastery when the
-Host resolves it, and by a Standard-Schema fallback otherwise. Editing the
-config restarts this plugin row (hot reload) and tears down owned servers.
+Host resolves it, and by a Standard-Schema fallback otherwise. Every field is
+declared volatile, so a settings write is committed into the running plugin
+instead of restarting it: the plugin resolves its config through those live
+references on every use, and a saved value (the model folder, for example)
+applies immediately without stopping a loaded model. The row still restarts,
+and tears down owned servers, when its ordinary options — not its config —
+change.
 
 | Field | Default | Meaning |
 |---|---|---|
@@ -174,9 +179,10 @@ Open **Settings → Open Model Hub** in the Web GUI. The page has four tabs:
 - **Runtime** — llama-server / mlxcel status (version, path, source, missing
   CUDA DLLs) and a one-click llama-server installer with a backend choice.
 - **Settings** — the grouped Config form: per-field hints and defaults, an
-  `Overridden` marker with a per-field reset, revision-fenced writes, and a
-  restart notice. Saving persists into the profile patch and restarts the plugin
-  row, stopping running model servers (downloads and the registry are kept).
+  `Overridden` marker with a per-field reset, and revision-fenced writes. Saving
+  persists into the profile patch and applies immediately: the values are
+  volatile, so the running plugin picks them up in place — no restart, no
+  stopped model server, downloads and the registry untouched.
 
 The dashboard talks to the Host through the plugin's own same-origin JSON bridge
 (`POST /api/open-model/status` and `POST /api/open-model/tool`). The bridge only
@@ -298,7 +304,8 @@ Windows 的 `llama-server` 与 Apple Silicon 的 `mlxcel-server`，并针对国�
 
 ### 配置与持久化
 
-- 配置字段见上表，全部可省略；修改配置会触发插件行热重载。
+- 配置字段见上表，全部可省略；所有字段都是 volatile，设置页保存后由 Host 就地提交到插件
+  持有的引用，插件每次使用时重新解析，因此立即生效，不会重启插件行，已加载的模型也不受影响。
 - 注册表、运行时缓存、下载日志、释放通知都位于
   `${DSH_HOME}/model-hub/`，运行时安装到 `${DSH_HOME}/runtimes/`，默认模型根目录
   是 `${DSH_HOME}/models`。
@@ -320,7 +327,8 @@ Windows 的 `llama-server` 与 Apple Silicon 的 `mlxcel-server`，并针对国�
   并可选择后端一键安装 llama-server；
 - **设置**：按“搜索与下载 / 网络与镜像 / 推理与资源 / 本地模型 / 高级 / 界面”分组的
   配置表单，逐项说明、默认值、`已覆盖` 标记与单项“恢复默认”，写入带版本校验；
-  保存会持久化到 profile patch 并重启插件行（运行中的模型会停止，下载与注册表保留）。
+  保存会持久化到 profile patch 并立即生效：值通过 volatile 引用就地提交，不重启插件行，
+  运行中的模型不会停止，下载与注册表原样保留。
 
 搜索与下载、扫描与运行状态通过插件自己的同源 JSON 桥
 （`POST /api/open-model/status`、`POST /api/open-model/tool`）访问 Host：只接受浏览器

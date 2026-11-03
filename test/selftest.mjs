@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.dirname(fileURLToPath(new URL('../', import.meta.url)));
 void root;
-const { normalizeConfig, buildChildEnv, endpointFor, effectiveModelRoots } = await import('../lib/config.js');
+const { normalizeConfig, liveConfig, buildChildEnv, endpointFor, effectiveModelRoots } = await import('../lib/config.js');
 const { messages, t } = await import('../lib/i18n.js');
 const { readGgufMetadata, detectGgufFile, detectModelDirectory, scanModelRoots } = await import('../lib/scan.js');
 const { ModelRegistry } = await import('../lib/registry.js');
@@ -158,6 +158,41 @@ test('config: unwraps schemastery volatile accessors', () => {
   assert.equal(config.proxy.all, 'socks5://127.0.0.1:1080');
   assert.equal(config.locale, 'en');
   assert.deepEqual(config.llamaArgs, ['--threads', '4']);
+});
+
+test('config: liveConfig follows a volatile settings update in place', () => {
+  // Mirrors the Host: a volatile-only config change commits new values into the
+  // references the running plugin holds instead of restarting it.
+  const write = Symbol.for('cosmokit.volatile.write');
+  const ref = (value) => {
+    let current = value;
+    return { get: () => current, [write]: (next) => { current = next; } };
+  };
+  const roots = ref(['/models/a']);
+  const interval = ref(30000);
+  const raw = { modelRoots: roots, idleCheckIntervalMs: interval };
+  const config = liveConfig(raw);
+
+  assert.deepEqual(effectiveModelRoots(config), ['/models/a']);
+  assert.equal(config.idleCheckIntervalMs, 30000);
+
+  roots[write](['D:\\data']);
+  interval[write](60000);
+  assert.deepEqual(effectiveModelRoots(config), ['D:\\data']);
+  assert.equal(config.idleCheckIntervalMs, 60000);
+  // The snapshot API still reports the value it just read, which is why the
+  // plugin must not keep one.
+  assert.deepEqual(normalizeConfig(raw).modelRoots, ['D:\\data']);
+});
+
+test('config: liveConfig keeps defaults and reads plain configs', () => {
+  const live = liveConfig({});
+  assert.deepEqual(live.modelRoots, []);
+  assert.equal(live.defaultSource, 'hf-mirror');
+  assert.equal(live.proxy.noProxy, '127.0.0.1,localhost');
+  const plain = liveConfig({ modelRoots: ['D:\\data'], idleTimeoutMs: 60000 });
+  assert.deepEqual(effectiveModelRoots(plain), ['D:\\data']);
+  assert.equal(plain.idleTimeoutMs, 60000);
 });
 
 test('config: proxy shorthand, empty strings are skipped, env is cleaned', () => {

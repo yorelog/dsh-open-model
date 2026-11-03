@@ -11,7 +11,7 @@
  * @module dsh-open-model
  */
 
-import { Config, normalizeConfig } from './lib/config.js';
+import { Config, liveConfig } from './lib/config.js';
 import { registerToolBridge } from './lib/bridge.js';
 import { detectDownloadTooling, DownloadManager } from './lib/download.js';
 import { translator } from './lib/i18n.js';
@@ -62,7 +62,10 @@ function createHubState(logger) {
  * @param {any} rawConfig validated loader config
  */
 export function apply(ctx, rawConfig) {
-  const config = normalizeConfig(rawConfig);
+  // A settings write only replaces volatile values: the Host commits them into
+  // the references this config view reads, so every use below follows the
+  // current settings instead of the values captured at activation.
+  const config = liveConfig(rawConfig);
   const logger = ctx.logger('dsh-open-model');
   const registry = new ModelRegistry({ logger });
   const state = createHubState(logger);
@@ -194,9 +197,13 @@ export function apply(ctx, rawConfig) {
     child.effect(() => child.settings.configure({ auto: false }, ctx.fiber), 'dsh-open-model: settings page policy');
   });
 
-  // Idle reaper: releases servers untouched for idleTimeoutMs.
+  // Idle reaper: releases servers untouched for idleTimeoutMs. The timeout
+  // itself is read per sweep, so a live setting applies; the tick interval is
+  // fixed by the timer, so a volatile update re-arms it when it changed.
   ctx.effect(() => {
-    const timer = setInterval(() => {
+    let timer = null;
+    let armedMs = 0;
+    const sweep = () => {
       void (async () => {
         await ready.catch(() => {});
         try {
@@ -220,9 +227,27 @@ export function apply(ctx, rawConfig) {
           logger?.warn?.(`[dsh-open-model] idle sweep failed: ${error instanceof Error ? error.message : String(error)}`);
         }
       })();
-    }, config.idleCheckIntervalMs);
-    timer.unref?.();
-    return () => clearInterval(timer);
+    };
+    const arm = () => {
+      const nextMs = config.idleCheckIntervalMs;
+      if (timer !== null && nextMs === armedMs) return;
+      if (timer !== null) clearInterval(timer);
+      armedMs = nextMs;
+      timer = setInterval(sweep, nextMs);
+      timer.unref?.();
+    };
+    arm();
+    const offVolatile = ctx.on?.('loader/volatile-update', () => {
+      try {
+        arm();
+      } catch {
+        // Re-arming must never break the Host's config update.
+      }
+    });
+    return () => {
+      if (timer !== null) clearInterval(timer);
+      if (typeof offVolatile === 'function') offVolatile();
+    };
   }, 'dsh-open-model: idle reaper');
 
   // Teardown: cancel downloads and stop every model server this instance owns.
